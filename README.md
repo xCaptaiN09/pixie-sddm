@@ -1,31 +1,13 @@
-# ✨ Pixie SDDM
+# ✨ Pixie SDDM (Legacy Qt5 Branch)
+
+> [!WARNING]
+> This is the **Legacy Qt5 Branch**. If you are on a modern system (Fedora 40+, Arch, NixOS, etc.), please use the [**main branch (Qt6)**](https://github.com/xCaptaiN09/pixie-sddm) for the best quality and compatibility.
 
 A clean, modern, and minimal SDDM theme inspired by Google Pixel UI and Material Design 3. 
 
-<div align="center">
-  <img src="screenshots/lock_screen.png" width="45%" alt="Lock Screen" />
-  <img src="screenshots/login_screen.png" width="45%" alt="Login Screen" />
-</div>
-
-<div align="center">
-  <img src="screenshots/lock_screen_2.png" width="22%" />
-  <img src="screenshots/login_screen_2.png" width="22%" />
-  <img src="screenshots/lock_screen_3.png" width="22%" />
-  <img src="screenshots/login_screen_3.png" width="22%" />
-</div>
-
-## 🌟 Features
-
-- **Pixel Aesthetic:** Clean typography and a unique two-tone stacked clock.
-- **Material You Dynamic Colors:** Intelligent color extraction that samples your wallpaper for UI accents.
-- **Smooth Transitions:** High-performance fade-in animations for all UI elements.
-- **Material Design 3:** Dark card UI with smooth interactions and responsive dropdowns.
-- **Keyboard Navigation:** Full support for navigating menus with arrows and `Enter`.
-- **Blur Effects:** Adaptive background blur that transitions smoothly when the login card is active.
-
 ---
 
-## 📦 Prerequisites
+## 📦 Prerequisites (Qt5)
 
 Before installing, you **must** install the required Qt5 modules for your distribution to avoid a black screen:
 
