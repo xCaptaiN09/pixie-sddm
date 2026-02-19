@@ -20,10 +20,12 @@ echo -e "${BLUE}==>${NC} Starting Pixie SDDM Installation..."
 # 1. SYSTEM DETECTION
 if command -v sddm-greeter-qt6 >/dev/null 2>&1; then
     SYSTEM_QT="6"
+    GREETER_CMD="sddm-greeter-qt6"
     TARGET_BRANCH="main"
     echo -e "${BLUE}==>${NC} System detected: ${GREEN}Qt6 (Modern)${NC}"
 else
     SYSTEM_QT="5"
+    GREETER_CMD="sddm-greeter"
     TARGET_BRANCH="qt5"
     echo -e "${BLUE}==>${NC} System detected: ${YELLOW}Qt5 (Legacy)${NC}"
 fi
@@ -77,4 +79,4 @@ else
 fi
 
 echo -e ""
-echo -e "Test with: ${BLUE}sddm-greeter${SYSTEM_QT/5/} --test-mode --theme ${THEME_DIR}${NC}"
+echo -e "Test with: ${BLUE}${GREETER_CMD} --test-mode --theme ${THEME_DIR}${NC}"
