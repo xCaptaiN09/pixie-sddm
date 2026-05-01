@@ -1,8 +1,4 @@
-/**
- * Pixie SDDM - Clock Component
- * Author: xCaptaiN09
- */
-import QtQuick
+import QtQuick 2.15
 
 Item {
     id: clock
@@ -10,28 +6,11 @@ Item {
     property string backgroundSource: ""
     property color defaultHoursColor: "#AED68A"
     property color defaultMinutesColor: "#D4E4BC"
-    property string fontFamily: "FlexRounded" // Overridden by Main.qml
+    property string fontFamily: "FlexRounded"
     property color baseAccent: config.accentColor
     property color smartHoursColor: defaultHoursColor
     property color smartMinutesColor: defaultMinutesColor
-    property string timeStr: ""
-
-    function updateTime() {
-        var date = new Date();
-        var hours = date.getHours();
-        var minutes = date.getMinutes();
-
-        // If 24-hour is not strictly "true", convert to 12-hour format
-        if (config.use24HourClock !== "true") {
-            hours = hours % 12;
-            if (hours === 0) hours = 12; // Midnight becomes 12
-        }
-
-        var hStr = hours < 10 ? "0" + hours : "" + hours;
-        var mStr = minutes < 10 ? "0" + minutes : "" + minutes;
-
-        clock.timeStr = hStr + mStr;
-    }
+    property string timeStr: "0000"
 
     function updateColors() {
         var base = clock.baseAccent;
@@ -55,18 +34,22 @@ Item {
     }
 
     onBaseAccentChanged: updateColors()
-    Component.onCompleted: {
-        updateColors();
-        updateTime();
-    }
+    Component.onCompleted: updateColors()
 
     Row {
         anchors.centerIn: parent
         spacing: 0
 
-        Column {
-            spacing: -130
+        // First Column: Tens Digit
+        Item {
+            width: 130
+            // DYNAMIC HEIGHT: Calculates exactly where the bottom text ends!
+            height: tensMinutes.y + tensMinutes.height
+
             Text {
+                id: tensHours
+                anchors.top: parent.top
+                anchors.horizontalCenter: parent.horizontalCenter
                 text: clock.timeStr.charAt(0)
                 color: clock.smartHoursColor
                 font.pixelSize: 200
@@ -77,6 +60,10 @@ Item {
                 antialiasing: true
             }
             Text {
+                id: tensMinutes
+                anchors.top: tensHours.bottom
+                anchors.topMargin: -35 // Your perfect gap
+                anchors.horizontalCenter: parent.horizontalCenter
                 text: clock.timeStr.charAt(2)
                 color: clock.smartMinutesColor
                 font.pixelSize: 200
@@ -88,9 +75,16 @@ Item {
             }
         }
 
-        Column {
-            spacing: -130
+        // Second Column: Ones Digit
+        Item {
+            width: 130
+            // DYNAMIC HEIGHT: Calculates exactly where the bottom text ends!
+            height: onesMinutes.y + onesMinutes.height
+
             Text {
+                id: onesHours
+                anchors.top: parent.top
+                anchors.horizontalCenter: parent.horizontalCenter
                 text: clock.timeStr.charAt(1)
                 color: clock.smartHoursColor
                 font.pixelSize: 200
@@ -101,6 +95,10 @@ Item {
                 antialiasing: true
             }
             Text {
+                id: onesMinutes
+                anchors.top: onesHours.bottom
+                anchors.topMargin: -35 // Your perfect gap
+                anchors.horizontalCenter: parent.horizontalCenter
                 text: clock.timeStr.charAt(3)
                 color: clock.smartMinutesColor
                 font.pixelSize: 200
@@ -117,6 +115,21 @@ Item {
         interval: 1000
         running: true
         repeat: true
-        onTriggered: updateTime()
+        triggeredOnStart: true
+        onTriggered: {
+            var date = new Date();
+            var hours = date.getHours();
+            var minutes = date.getMinutes();
+
+            if (config.use24HourClock === "false") {
+                hours = hours % 12;
+                if (hours === 0) hours = 12;
+            }
+
+            var hStr = hours < 10 ? "0" + hours : "" + hours;
+            var mStr = minutes < 10 ? "0" + minutes : "" + minutes;
+
+            clock.timeStr = hStr + mStr;
+        }
     }
 }

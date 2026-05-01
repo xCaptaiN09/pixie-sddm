@@ -1,8 +1,4 @@
-/**
- * Pixie SDDM - PowerBar Component
- * Author: xCaptaiN09
- */
-import QtQuick
+import QtQuick 2.15
 
 Row {
     id: powerBarRoot
@@ -13,7 +9,7 @@ Row {
 
     FontLoader { id: iconFont; source: "../assets/fonts/MaterialDesignIcons.ttf" }
 
-    // Battery (With forced live updates)
+    // Battery
     Row {
         id: batteryRow
         spacing: 5
@@ -37,22 +33,22 @@ Row {
             anchors.verticalCenter: parent.verticalCenter
         }
 
-        // Bulletproof Live Update: SDDM sometimes fails to emit battery signals,
-        // so we force a check every 5 seconds.
         Timer {
             interval: 5000
-            running: typeof battery !== "undefined" && battery.present
+            running: typeof battery !== "undefined"
             repeat: true
             onTriggered: {
-                batteryText.text = battery.percent + "%"
-                batteryIcon.text = battery.charging ? "󱐋" : "󰁹"
+                if (typeof battery !== "undefined" && typeof battery.percent !== "undefined") {
+                    batteryText.text = battery.percent + "%"
+                    batteryIcon.text = battery.charging ? "󱐋" : "󰁹"
+                }
             }
         }
     }
 
     // Keyboard Layout
     Text {
-        text: (typeof keyboard !== "undefined" && keyboard.layouts[keyboard.currentLayout]) ? keyboard.layouts[keyboard.currentLayout].shortName : "US"
+        text: (typeof keyboard !== "undefined" && keyboard.layouts.length > 0) ? keyboard.layouts[keyboard.currentLayout].shortName : "US"
         color: textColor
         font.pixelSize: 14
         font.capitalization: Font.AllUppercase

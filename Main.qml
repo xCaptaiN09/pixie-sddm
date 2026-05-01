@@ -39,34 +39,34 @@ Rectangle {
 
     function doLogin() {
         if (!loginState.visible || isLoggingIn) return;
-        
+
         var user = "";
         if (typeof userModel !== "undefined" && userModel.count > 0) {
             var idx = container.userIndex;
             if (idx < 0 || idx >= userModel.count) idx = 0;
-            
+
             var edit = userModel.data(userModel.index(idx, 0), Qt.EditRole);
             var nameRole = userModel.data(userModel.index(idx, 0), Qt.UserRole + 1);
             var display = userModel.data(userModel.index(idx, 0), Qt.DisplayRole);
-            
+
             user = edit ? edit.toString() : (nameRole ? nameRole.toString() : (display ? display.toString() : ""));
         }
-        
+
         if (!user || user === "" || user === "User") {
             user = sddm.lastUser;
         }
-        
+
         if (!user && typeof userModel !== "undefined" && userModel.count > 0) {
             var firstEdit = userModel.data(userModel.index(0, 0), Qt.EditRole);
             user = firstEdit ? firstEdit.toString() : "";
         }
-        
+
         if (!user) return;
 
         container.isLoggingIn = true;
         var pass = passwordField.text;
         var sess = container.sessionIndex;
-        
+
         if (typeof sessionModel !== "undefined") {
             if (sess < 0 || sess >= sessionModel.count) sess = 0;
         } else {
@@ -122,14 +122,14 @@ Rectangle {
         renderTarget: Canvas.Image
         property bool processed: false
         property int retries: 0
-        
+
         onPaint: {
             var ctx = getContext("2d");
             var res = 60;
             ctx.clearRect(0, 0, res, res);
             ctx.drawImage(backgroundImage, 0, 0, res, res);
             var imgData = ctx.getImageData(0, 0, res, res).data;
-            
+
             if (!imgData || imgData.length === 0) return;
 
             // FIX: Check if canvas read pure black (GPU sync delay bug)
@@ -151,28 +151,28 @@ Rectangle {
             var histogram = new Array(36).fill(0);
             var sampleColors = new Array(36).fill(null);
             var vibrantFound = false;
-            
+
             for (var i = 0; i < imgData.length; i += 4) {
                 var r = imgData[i] / 255;
                 var g = imgData[i+1] / 255;
                 var b = imgData[i+2] / 255;
                 var pCol = Qt.rgba(r, g, b, 1.0);
-                
+
                 if (pCol.hsvSaturation > 0.3 && pCol.hsvValue > 0.15) {
                     var h = pCol.hsvHue * 360;
                     if (h < 0) continue;
-                    
+
                     var bIdx = Math.floor(h / 10) % 36;
                     var weight = pCol.hsvSaturation * pCol.hsvValue;
                     histogram[bIdx] += weight;
-                    
+
                     if (!sampleColors[bIdx] || weight > (sampleColors[bIdx].hsvSaturation * sampleColors[bIdx].hsvValue)) {
                         sampleColors[bIdx] = pCol;
                     }
                     vibrantFound = true;
                 }
             }
-            
+
             if (!vibrantFound) {
                 var totalBrightness = 0;
                 var pixelCount = imgData.length / 4;
@@ -183,7 +183,7 @@ Rectangle {
                     totalBrightness += (0.299 * r_l + 0.587 * g_l + 0.114 * b_l);
                 }
                 var avgBrightness = totalBrightness / pixelCount;
-                
+
                 container.extractedAccent = avgBrightness < 0.5 ? "#D0D0D0" : "#404040";
                 console.log("Pixie SDDM: No vibrant colors. Avg brightness: " + avgBrightness.toFixed(2) + ". Using neutral contrast.");
                 processed = true;
@@ -191,7 +191,7 @@ Rectangle {
             }
 
             histogram[0] += histogram[35];
-            
+
             var maxCount = -1;
             var winnerIdx = -1;
             for (var j = 0; j < 35; j++) {
@@ -200,7 +200,7 @@ Rectangle {
                     winnerIdx = j;
                 }
             }
-            
+
             if (winnerIdx !== -1 && sampleColors[winnerIdx]) {
                 var finalColor = sampleColors[winnerIdx];
                 var h = finalColor.hsvHue;
@@ -225,6 +225,7 @@ Rectangle {
     FontLoader { id: fontRegular; source: "assets/fonts/FlexRounded-R.ttf" }
     FontLoader { id: fontMedium; source: "assets/fonts/FlexRounded-M.ttf" }
     FontLoader { id: fontBold; source: "assets/fonts/FlexRounded-B.ttf" }
+    FontLoader { id: iconFont; source: "assets/fonts/MaterialDesignIcons.ttf" }
 
     Image {
         id: backgroundImage
@@ -240,7 +241,7 @@ Rectangle {
         source: backgroundImage
         radius: loginState.visible ? 64 : 0
         opacity: loginState.visible ? 1.0 : 0.0
-        
+
         Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.InOutQuad } }
         Behavior on radius { NumberAnimation { duration: 400; easing.type: Easing.InOutQuad } }
     }
@@ -314,7 +315,7 @@ Rectangle {
             opacity: container.uiReady ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: 300 } }
         }
-        
+
         Text {
             text: "Press any key to unlock"
             color: config.textColor
@@ -361,14 +362,15 @@ Rectangle {
         Rectangle {
             id: loginCard
             width: 380
-            height: 480
+            height: 480 + (numLockIndicator.visible ? 40 : 0)
             x: (parent.width - width) / 2
-            y: (parent.height - height) / 2
+            y: (parent.height - 480) / 2
             color: loginState.isError ? "#442222" : baseColor
             opacity: 0.7
             radius: 32
-            
+
             Behavior on color { ColorAnimation { duration: 200 } }
+            Behavior on height { NumberAnimation { duration: 300; easing.type: Easing.InOutQuad } }
 
             ColumnLayout {
                 anchors.fill: parent
@@ -379,14 +381,14 @@ Rectangle {
                     Layout.preferredWidth: 120
                     Layout.preferredHeight: 120
                     Layout.alignment: Qt.AlignHCenter
-                    
+
                     Rectangle {
                         id: avatarFallback
                         anchors.fill: parent
                         color: surfaceColor
                         radius: width / 2
                         visible: avatar.status !== Image.Ready
-                        
+
                         Text {
                             anchors.centerIn: parent
                             text: {
@@ -412,8 +414,8 @@ Rectangle {
                         anchors.fill: parent
                         fillMode: Image.PreserveAspectCrop
                         smooth: true
-                        visible: false 
-                        
+                        visible: false
+
                         property string userIcon: {
                             if (typeof userModel !== "undefined" && userModel.count > 0) {
                                 var icon = userModel.data(userModel.index(container.userIndex, 0), Qt.UserRole + 3);
@@ -421,9 +423,9 @@ Rectangle {
                             }
                             return "assets/avatar.jpg";
                         }
-                        
+
                         source: userIcon
-                        
+
                         onStatusChanged: {
                             if (status === Image.Error && source != "assets/avatar.jpg") {
                                 source = "assets/avatar.jpg";
@@ -451,7 +453,7 @@ Rectangle {
                     Layout.preferredWidth: userNameLabel.width + 40
                     Layout.preferredHeight: userNameLabel.height + 20
                     Layout.topMargin: 10
-                    
+
                     Rectangle {
                         anchors.fill: parent
                         color: "white"
@@ -487,7 +489,7 @@ Rectangle {
                         anchors.fill: parent
                         onClicked: userPopup.open()
                     }
-                    
+
                     scale: userClickArea.pressed ? 0.95 : 1.0
                     Behavior on scale { NumberAnimation { duration: 100 } }
                 }
@@ -501,15 +503,15 @@ Rectangle {
                     radius: 18
                     border.width: 1
                     border.color: (sessionClickArea.pressed || sessionPopup.opened) ? container.extractedAccent : surfaceVariantColor
-                    
+
                     scale: sessionClickArea.pressed ? 0.95 : 1.0
                     Behavior on scale { NumberAnimation { duration: 100 } }
 
                     RowLayout {
                         anchors.centerIn: parent
                         spacing: 8
-                        Text { 
-                            text: "󰟀" 
+                        Text {
+                            text: "󰟀"
                             color: container.extractedAccent
                             font.pixelSize: 16
                             font.family: iconFont.name
@@ -541,10 +543,9 @@ Rectangle {
                     }
                 }
 
-                Item { Layout.fillHeight: true }
-
                 TextField {
                     id: passwordField
+                    Layout.topMargin: 30
                     echoMode: TextInput.Password
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
@@ -552,7 +553,7 @@ Rectangle {
                     color: "white"
                     focus: loginState.visible
                     enabled: !container.isLoggingIn
-                    
+
                     background: Rectangle {
                         color: surfaceColor
                         radius: 16
@@ -560,7 +561,7 @@ Rectangle {
                         border.color: container.extractedAccent
                         opacity: parent.enabled ? 1.0 : 0.5
                     }
-                    
+
                     Text {
                         text: "Enter Password"
                         color: "gray"
@@ -598,7 +599,7 @@ Rectangle {
                     Layout.preferredHeight: 64
                     focusPolicy: Qt.NoFocus
                     enabled: !container.isLoggingIn
-                    
+
                     contentItem: Text {
                         text: container.isLoggingIn ? "⋯" : "→"
                         color: "white"
@@ -617,6 +618,8 @@ Rectangle {
                         container.doLogin();
                     }
                 }
+
+                Item { Layout.fillHeight: true }
             }
         }
     }
@@ -637,7 +640,7 @@ Rectangle {
         y: (parent.height - height) / 2 - 50
         modal: true
         focus: true
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside 
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         onOpened: userList.forceActiveFocus()
         background: Rectangle {
             color: baseColor
@@ -784,7 +787,7 @@ Rectangle {
                     anchors.fill: parent
                     spacing: 0
                     Item { Layout.preferredWidth: 20 }
-                    Text { 
+                    Text {
                         Layout.preferredWidth: 40
                         text: "󰟀"
                         color: isCurrent ? container.extractedAccent : "gray"
