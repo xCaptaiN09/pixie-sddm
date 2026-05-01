@@ -54,7 +54,15 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # 5. INSTALLATION
+BACKUP_DIR=$(mktemp -d)
+
 if [ -d "${THEME_DIR}" ]; then
+    echo -e "${BLUE}==>${NC} Backing up user configurations..."
+    # Backup custom config and assets if they exist
+    [ -f "${THEME_DIR}/theme.conf" ] && cp "${THEME_DIR}/theme.conf" "${BACKUP_DIR}/"
+    [ -f "${THEME_DIR}/assets/background.jpg" ] && cp "${THEME_DIR}/assets/background.jpg" "${BACKUP_DIR}/"
+    [ -f "${THEME_DIR}/assets/avatar.jpg" ] && cp "${THEME_DIR}/assets/avatar.jpg" "${BACKUP_DIR}/"
+
     echo -e "${BLUE}==>${NC} Cleaning old version..."
     rm -rf "${THEME_DIR}"
 fi
@@ -63,6 +71,24 @@ echo -e "${BLUE}==>${NC} Installing Pixie (Qt${SYSTEM_QT}) to ${THEME_DIR}..."
 mkdir -p "${THEME_DIR}"
 cp -r assets components Main.qml metadata.desktop theme.conf LICENSE "${THEME_DIR}/"
 chmod -R 755 "${THEME_DIR}"
+
+# Restore user configurations if they were backed up
+if [ -f "${BACKUP_DIR}/theme.conf" ]; then
+    echo -e "${BLUE}==>${NC} Restoring user configurations..."
+    cp "${BACKUP_DIR}/theme.conf" "${THEME_DIR}/theme.conf"
+    [ -f "${BACKUP_DIR}/background.jpg" ] && cp "${BACKUP_DIR}/background.jpg" "${THEME_DIR}/assets/background.jpg"
+    [ -f "${BACKUP_DIR}/avatar.jpg" ] && cp "${BACKUP_DIR}/avatar.jpg" "${THEME_DIR}/assets/avatar.jpg"
+    # Ensure autoColor feature is present in older configs
+    if ! grep -q "^autoColor=" "${THEME_DIR}/theme.conf"; then
+        sed -i '/^accentColor=/a autoColor=true' "${THEME_DIR}/theme.conf"
+    fi
+    # Ensure use24HourClock feature is present in older configs
+    if ! grep -q "^use24HourClock=" "${THEME_DIR}/theme.conf"; then
+        sed -i '/^autoColor=/a use24HourClock=true' "${THEME_DIR}/theme.conf"
+    fi
+fi
+
+rm -rf "${BACKUP_DIR}"
 
 echo -e "${GREEN}Done!${NC} Pixie SDDM is now installed."
 

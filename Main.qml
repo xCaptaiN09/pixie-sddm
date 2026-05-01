@@ -99,24 +99,29 @@ Rectangle {
         }
     }
 
-    // Dynamic Color Extraction
-    property color extractedAccent: "#A9C78F"
-    
+    // Dynamic Color Configuration
+    property color extractedAccent: config.accentColor
+    property color baseColor: config.backgroundColor
+    property color surfaceColor: Qt.lighter(baseColor, 1.3)
+    property color surfaceVariantColor: Qt.lighter(baseColor, 1.6)
+    property bool uiReady: config.autoColor !== "true" || colorExtractor.processed
+
     Timer {
         id: colorDelay
-        interval: 1000 // Give it a full second
-        repeat: true   // Keep trying until we succeed
-        running: backgroundImage.status === Image.Ready && !colorExtractor.processed
+        interval: 1000
+        repeat: true
+        running: backgroundImage.status === Image.Ready && !colorExtractor.processed && config.autoColor === "true"
         onTriggered: colorExtractor.requestPaint()
     }
 
     Canvas {
         id: colorExtractor
         width: 60; height: 60
-        x: -100; y: -100 // Off-screen but "visible" for reliable rendering
+        x: -100; y: -100
         z: -1
         renderTarget: Canvas.Image
         property bool processed: false
+        property int retries: 0
         
         onPaint: {
             var ctx = getContext("2d");
@@ -127,7 +132,22 @@ Rectangle {
             
             if (!imgData || imgData.length === 0) return;
 
-            // 36 Buckets (10 degrees each) for high resolution hue detection
+            // FIX: Check if canvas read pure black (GPU sync delay bug)
+            var pixelSum = 0;
+            for (var p = 0; p < imgData.length; p++) pixelSum += imgData[p];
+
+            if (pixelSum === 0) {
+                retries++;
+                if (retries > 3) {
+                    container.extractedAccent = "#D0D0D0";
+                    console.log("Pixie SDDM: Pure black wallpaper detected. Using neutral contrast.");
+                    processed = true;
+                }
+                return;
+            }
+
+            retries = 0;
+
             var histogram = new Array(36).fill(0);
             var sampleColors = new Array(36).fill(null);
             var vibrantFound = false;
@@ -138,13 +158,11 @@ Rectangle {
                 var b = imgData[i+2] / 255;
                 var pCol = Qt.rgba(r, g, b, 1.0);
                 
-                // Filter: Must be colorful and not too dark
-                if (pCol.hsvSaturation > 0.3 && pCol.hsvValue > 0.25) {
+                if (pCol.hsvSaturation > 0.3 && pCol.hsvValue > 0.15) {
                     var h = pCol.hsvHue * 360;
                     if (h < 0) continue;
                     
                     var bIdx = Math.floor(h / 10) % 36;
-                    // Weight: Focus on saturation to find the "intended" accent
                     var weight = pCol.hsvSaturation * pCol.hsvValue;
                     histogram[bIdx] += weight;
                     
@@ -155,12 +173,25 @@ Rectangle {
                 }
             }
             
-            if (!vibrantFound) return; // Keep trying
+            if (!vibrantFound) {
+                var totalBrightness = 0;
+                var pixelCount = imgData.length / 4;
+                for (var k = 0; k < imgData.length; k += 4) {
+                    var r_l = imgData[k] / 255;
+                    var g_l = imgData[k+1] / 255;
+                    var b_l = imgData[k+2] / 255;
+                    totalBrightness += (0.299 * r_l + 0.587 * g_l + 0.114 * b_l);
+                }
+                var avgBrightness = totalBrightness / pixelCount;
+                
+                container.extractedAccent = avgBrightness < 0.5 ? "#D0D0D0" : "#404040";
+                console.log("Pixie SDDM: No vibrant colors. Avg brightness: " + avgBrightness.toFixed(2) + ". Using neutral contrast.");
+                processed = true;
+                return;
+            }
 
-            // Merge Red wrap (350-360 and 0-10)
             histogram[0] += histogram[35];
             
-            // Find the most frequent vibrant hue (The Mode)
             var maxCount = -1;
             var winnerIdx = -1;
             for (var j = 0; j < 35; j++) {
@@ -173,11 +204,10 @@ Rectangle {
             if (winnerIdx !== -1 && sampleColors[winnerIdx]) {
                 var finalColor = sampleColors[winnerIdx];
                 var h = finalColor.hsvHue;
-                // Slightly decreased saturation for a more professional look
                 var s = Math.max(0.35, Math.min(0.55, finalColor.hsvSaturation * 0.9));
                 container.extractedAccent = Qt.hsva(h, s, 0.95, 1.0);
                 console.log("Pixie SDDM: SUCCESS! Extracted Hue: " + (h * 360).toFixed(0) + "°");
-                processed = true; // Stop the timer
+                processed = true;
             }
         }
     }
@@ -201,16 +231,18 @@ Rectangle {
         source: config.background
         anchors.fill: parent
         fillMode: Image.PreserveAspectCrop
-        layer.enabled: true
     }
 
+    // High-Quality Standalone Blur (Qt5 Native)
     FastBlur {
         id: backgroundBlur
         anchors.fill: parent
         source: backgroundImage
-        radius: 64
-        opacity: loginState.visible ? 1 : 0
+        radius: loginState.visible ? 64 : 0
+        opacity: loginState.visible ? 1.0 : 0.0
+        
         Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.InOutQuad } }
+        Behavior on radius { NumberAnimation { duration: 400; easing.type: Easing.InOutQuad } }
     }
 
     Rectangle {
@@ -229,7 +261,7 @@ Rectangle {
         }
         textColor: container.extractedAccent
         z: 100
-        opacity: colorExtractor.processed ? 1 : 0
+        opacity: container.uiReady ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: 300 } }
     }
 
@@ -255,14 +287,14 @@ Rectangle {
         text: Qt.formatDateTime(new Date(), "dddd, MMMM d")
         color: container.extractedAccent
         font.pixelSize: 22
-        font.family: config.fontFamily
+        font.family: fontRegular.name
         anchors {
             top: parent.top
             left: parent.left
             topMargin: 50
             leftMargin: 60
         }
-        opacity: colorExtractor.processed ? 1 : 0
+        opacity: container.uiReady ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: 300 } }
     }
 
@@ -278,8 +310,8 @@ Rectangle {
             anchors.centerIn: parent
             backgroundSource: config.background
             baseAccent: container.extractedAccent
-            fontFamily: config.fontFamily
-            opacity: colorExtractor.processed ? 1 : 0
+            fontFamily: fontRegular.name
+            opacity: container.uiReady ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: 300 } }
         }
         
@@ -332,7 +364,7 @@ Rectangle {
             height: 480
             x: (parent.width - width) / 2
             y: (parent.height - height) / 2
-            color: loginState.isError ? "#442222" : "#1A1C18"
+            color: loginState.isError ? "#442222" : baseColor
             opacity: 0.7
             radius: 32
             
@@ -351,7 +383,7 @@ Rectangle {
                     Rectangle {
                         id: avatarFallback
                         anchors.fill: parent
-                        color: "#2D2F27"
+                        color: surfaceColor
                         radius: width / 2
                         visible: avatar.status !== Image.Ready
                         
@@ -380,7 +412,7 @@ Rectangle {
                         anchors.fill: parent
                         fillMode: Image.PreserveAspectCrop
                         smooth: true
-                        visible: false // Hidden because OpacityMask handles the display
+                        visible: false 
                         
                         property string userIcon: {
                             if (typeof userModel !== "undefined" && userModel.count > 0) {
@@ -447,7 +479,7 @@ Rectangle {
                         color: "white"
                         font.pixelSize: 24
                         font.weight: Font.Bold
-                        font.family: config.fontFamily
+                        font.family: fontRegular.name
                     }
 
                     MouseArea {
@@ -465,10 +497,10 @@ Rectangle {
                     Layout.alignment: Qt.AlignHCenter
                     Layout.preferredWidth: 180
                     Layout.preferredHeight: 36
-                    color: (sessionClickArea.pressed || sessionPopup.opened) ? "#3D3F37" : "#2D2F27"
+                    color: (sessionClickArea.pressed || sessionPopup.opened) ? surfaceVariantColor : surfaceColor
                     radius: 18
                     border.width: 1
-                    border.color: (sessionClickArea.pressed || sessionPopup.opened) ? container.extractedAccent : "#3D3F37"
+                    border.color: (sessionClickArea.pressed || sessionPopup.opened) ? container.extractedAccent : surfaceVariantColor
                     
                     scale: sessionClickArea.pressed ? 0.95 : 1.0
                     Behavior on scale { NumberAnimation { duration: 100 } }
@@ -480,6 +512,7 @@ Rectangle {
                             text: "󰟀" 
                             color: container.extractedAccent
                             font.pixelSize: 16
+                            font.family: iconFont.name
                         }
                         Text {
                             text: {
@@ -497,6 +530,7 @@ Rectangle {
                             color: "white"
                             font.pixelSize: 13
                             font.weight: Font.Medium
+                            font.family: fontRegular.name
                         }
                     }
 
@@ -520,7 +554,7 @@ Rectangle {
                     enabled: !container.isLoggingIn
                     
                     background: Rectangle {
-                        color: "#2D2F27"
+                        color: surfaceColor
                         radius: 16
                         border.width: parent.activeFocus ? 2 : 0
                         border.color: container.extractedAccent
@@ -544,7 +578,7 @@ Rectangle {
                     text: "Num Lock is on"
                     color: container.extractedAccent
                     font.pixelSize: 14
-                    font.family: config.fontFamily
+                    font.family: fontRegular.name
                     font.weight: Font.Medium
                     Layout.alignment: Qt.AlignHCenter
                     visible: {
@@ -574,7 +608,7 @@ Rectangle {
                     }
 
                     background: Rectangle {
-                        color: container.isLoggingIn ? "#3D3F37" : (loginButton.pressed ? Qt.darker(container.extractedAccent, 1.1) : container.extractedAccent)
+                        color: container.isLoggingIn ? surfaceVariantColor : (loginButton.pressed ? Qt.darker(container.extractedAccent, 1.1) : container.extractedAccent)
                         radius: 32
                         opacity: container.isLoggingIn ? 0.5 : 1.0
                     }
@@ -587,7 +621,7 @@ Rectangle {
         }
     }
 
-    Keys.onPressed: function(event) {
+    Keys.onPressed: {
         if (!loginState.visible) {
             loginState.visible = true;
             passwordField.forceActiveFocus();
@@ -606,10 +640,10 @@ Rectangle {
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside 
         onOpened: userList.forceActiveFocus()
         background: Rectangle {
-            color: "#1A1C18"
+            color: baseColor
             radius: 24
             opacity: 0.95
-            border.color: "#3D3F37"
+            border.color: surfaceVariantColor
             border.width: 1
         }
         enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 200 } }
@@ -629,7 +663,7 @@ Rectangle {
                 height: 40
                 property bool isCurrent: index === userList.currentIndex
                 background: Rectangle {
-                    color: isCurrent ? "#3D3F37" : (hovered ? "#2D2F27" : "transparent")
+                    color: isCurrent ? surfaceVariantColor : (hovered ? surfaceColor : "transparent")
                     radius: 12
                     Rectangle {
                         anchors.left: parent.left
@@ -650,7 +684,7 @@ Rectangle {
                         Layout.preferredWidth: 28
                         Layout.preferredHeight: 28
                         Layout.alignment: Qt.AlignVCenter
-                        color: isCurrent ? container.extractedAccent : "#3D3F37"
+                        color: isCurrent ? container.extractedAccent : surfaceVariantColor
                         radius: 14
                         Text {
                             anchors.centerIn: parent
@@ -661,7 +695,7 @@ Rectangle {
                                 var finalVal = d ? d.toString() : (n_r ? n_r.toString() : "U");
                                 return finalVal.charAt(0).toUpperCase();
                             }
-                            color: isCurrent ? "#1A1C18" : "white"
+                            color: isCurrent ? baseColor : "white"
                             font.pixelSize: 12
                             font.family: fontBold.name
                             font.weight: Font.Bold
@@ -680,7 +714,7 @@ Rectangle {
                         }
                         color: isCurrent ? "white" : (hovered ? "#DDDDDD" : "#AAAAAA")
                         font.pixelSize: 15
-                        font.family: config.fontFamily
+                        font.family: fontRegular.name
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                         rightPadding: 60
@@ -710,10 +744,10 @@ Rectangle {
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         onOpened: sessionList.forceActiveFocus()
         background: Rectangle {
-            color: "#1A1C18"
+            color: baseColor
             radius: 24
             opacity: 0.95
-            border.color: "#3D3F37"
+            border.color: surfaceVariantColor
             border.width: 1
         }
         enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 200 } }
@@ -733,7 +767,7 @@ Rectangle {
                 height: 40
                 property bool isCurrent: index === sessionList.currentIndex
                 background: Rectangle {
-                    color: isCurrent ? "#3D3F37" : (hovered ? "#2D2F27" : "transparent")
+                    color: isCurrent ? surfaceVariantColor : (hovered ? surfaceColor : "transparent")
                     radius: 12
                     Rectangle {
                         anchors.left: parent.left
@@ -755,6 +789,7 @@ Rectangle {
                         text: "󰟀"
                         color: isCurrent ? container.extractedAccent : "gray"
                         font.pixelSize: 16
+                        font.family: iconFont.name
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -767,7 +802,7 @@ Rectangle {
                         }
                         color: isCurrent ? "white" : "#AAAAAA"
                         font.pixelSize: 14
-                        font.family: config.fontFamily
+                        font.family: fontRegular.name
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                         rightPadding: 60

@@ -2,23 +2,24 @@
  * Pixie SDDM - PowerBar Component
  * Author: xCaptaiN09
  */
-import QtQuick 2.15
+import QtQuick
 
 Row {
     id: powerBarRoot
     spacing: 20
     height: 30
-    
+
     property color textColor: "white"
 
-    // Battery
+    FontLoader { id: iconFont; source: "../assets/fonts/MaterialDesignIcons.ttf" }
+
+    // Battery (With forced live updates)
     Row {
         id: batteryRow
         spacing: 5
-        // Show if battery object exists and reports a valid percentage
-        visible: typeof battery !== "undefined" && battery.percent !== undefined
+        visible: typeof battery !== "undefined" && typeof battery.percent !== "undefined"
         anchors.verticalCenter: parent.verticalCenter
-        
+
         Text {
             id: batteryText
             text: (typeof battery !== "undefined" ? battery.percent : "0") + "%"
@@ -28,10 +29,24 @@ Row {
             anchors.verticalCenter: parent.verticalCenter
         }
         Text {
+            id: batteryIcon
             text: (typeof battery !== "undefined" && battery.charging) ? "󱐋" : "󰁹"
             color: textColor
             font.pixelSize: 18
+            font.family: iconFont.name
             anchors.verticalCenter: parent.verticalCenter
+        }
+
+        // Bulletproof Live Update: SDDM sometimes fails to emit battery signals,
+        // so we force a check every 5 seconds.
+        Timer {
+            interval: 5000
+            running: typeof battery !== "undefined" && battery.present
+            repeat: true
+            onTriggered: {
+                batteryText.text = battery.percent + "%"
+                batteryIcon.text = battery.charging ? "󱐋" : "󰁹"
+            }
         }
     }
 
@@ -43,7 +58,7 @@ Row {
         font.capitalization: Font.AllUppercase
         visible: typeof keyboard !== "undefined" && keyboard.layouts.length > 1
         anchors.verticalCenter: parent.verticalCenter
-        
+
         MouseArea {
             anchors.fill: parent
             onClicked: {
@@ -57,6 +72,7 @@ Row {
         text: "󰤄"
         color: textColor
         font.pixelSize: 20
+        font.family: iconFont.name
         anchors.verticalCenter: parent.verticalCenter
         MouseArea {
             anchors.fill: parent
@@ -69,6 +85,7 @@ Row {
         text: "󰑐"
         color: textColor
         font.pixelSize: 20
+        font.family: iconFont.name
         anchors.verticalCenter: parent.verticalCenter
         MouseArea {
             anchors.fill: parent
@@ -81,6 +98,7 @@ Row {
         text: "󰐥"
         color: textColor
         font.pixelSize: 20
+        font.family: iconFont.name
         anchors.verticalCenter: parent.verticalCenter
         MouseArea {
             anchors.fill: parent

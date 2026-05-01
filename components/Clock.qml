@@ -2,150 +2,77 @@
  * Pixie SDDM - Clock Component
  * Author: xCaptaiN09
  */
-import QtQuick 2.15
+import QtQuick
 
 Item {
-
     id: clock
 
     property string backgroundSource: ""
-
     property color defaultHoursColor: "#AED68A"
-
     property color defaultMinutesColor: "#D4E4BC"
-
-    property string fontFamily: "Google Sans Flex Freeze"
-
-
-
-    // This property automatically converts the hex string from config to a valid color object
-
+    property string fontFamily: "FlexRounded" // Overridden by Main.qml
     property color baseAccent: config.accentColor
-
-
-
-    // Dynamic Colors
-
     property color smartHoursColor: defaultHoursColor
-
     property color smartMinutesColor: defaultMinutesColor
+    property string timeStr: ""
 
+    function updateTime() {
+        var date = new Date();
+        var hours = date.getHours();
+        var minutes = date.getMinutes();
 
+        // If 24-hour is not strictly "true", convert to 12-hour format
+        if (config.use24HourClock !== "true") {
+            hours = hours % 12;
+            if (hours === 0) hours = 12; // Midnight becomes 12
+        }
 
-    // Helper to get individual digits for perfect alignment
+        var hStr = hours < 10 ? "0" + hours : "" + hours;
+        var mStr = minutes < 10 ? "0" + minutes : "" + minutes;
 
-    property string timeStr: Qt.formatTime(new Date(), "HHmm")
-
-
-
-    function updateColors() {
-
-        // Use the baseAccent property which QML has already parsed correctly
-
-        var base = clock.baseAccent;
-
-        
-
-        // Debug check (will show in sddm-greeter output)
-
-        // console.log("Clock Base Color: " + base + " Hue: " + base.hsvHue);
-
-
-
-        // Material 3 logic: 
-
-        // Hours = Vibrant/Deep version of accent
-
-        // Minutes = Soft/Pastel version of accent
-
-        
-
-                if (base.hsvValue < 0.3) {
-
-        
-
-                    // Extremely dark: Shift towards light theme for clock
-
-        
-
-                    clock.smartHoursColor = Qt.hsva(base.hsvHue, 0.6, 0.9, 1.0);
-
-        
-
-                    clock.smartMinutesColor = Qt.hsva(base.hsvHue, 0.35, 0.85, 1.0);
-
-        
-
-                } else if (base.hsvValue > 0.8 && base.hsvSaturation < 0.2) {
-
-        
-
-                    // Very bright/white-ish: Darken slightly to keep it readable
-
-        
-
-                    clock.smartHoursColor = Qt.hsva(base.hsvHue, 0.8, 0.7, 1.0);
-
-        
-
-                    clock.smartMinutesColor = Qt.hsva(base.hsvHue, 0.5, 0.75, 1.0);
-
-        
-
-                        } else {
-
-        
-
-                            // Standard Range:
-
-        
-
-                            // Hours: Bold & Vibrant
-
-        
-
-                            clock.smartHoursColor = Qt.hsva(base.hsvHue, Math.min(1.0, base.hsvSaturation * 1.3), 0.95, 1.0);
-
-        
-
-                            // Minutes: Middle ground - brighter than before, but still distinctly tinted
-
-        
-
-                            clock.smartMinutesColor = Qt.hsva(base.hsvHue, Math.min(1.0, base.hsvSaturation * 0.75), 0.92, 1.0);
-
-        
-
-                        }
-
+        clock.timeStr = hStr + mStr;
     }
 
+    function updateColors() {
+        var base = clock.baseAccent;
 
+        if (base.hsvSaturation < 0.15) {
+            clock.smartHoursColor = Qt.lighter(base, 1.3);
+            clock.smartMinutesColor = Qt.darker(base, 1.4);
+            return;
+        }
+
+        if (base.hsvValue < 0.5) {
+            clock.smartHoursColor = Qt.hsva(base.hsvHue, 0.7, 0.9, 1.0);
+            clock.smartMinutesColor = Qt.hsva(base.hsvHue, 0.45, 0.85, 1.0);
+        } else if (base.hsvValue > 0.8 && base.hsvSaturation < 0.2) {
+            clock.smartHoursColor = Qt.hsva(base.hsvHue, 0.8, 0.7, 1.0);
+            clock.smartMinutesColor = Qt.hsva(base.hsvHue, 0.5, 0.75, 1.0);
+        } else {
+            clock.smartHoursColor = Qt.hsva(base.hsvHue, Math.min(1.0, base.hsvSaturation * 1.3), 0.95, 1.0);
+            clock.smartMinutesColor = Qt.hsva(base.hsvHue, Math.min(1.0, base.hsvSaturation * 0.75), 0.92, 1.0);
+        }
+    }
 
     onBaseAccentChanged: updateColors()
-
-    Component.onCompleted: updateColors()
-
-
+    Component.onCompleted: {
+        updateColors();
+        updateTime();
+    }
 
     Row {
-
         anchors.centerIn: parent
-
         spacing: 0
 
- // Adjust this for horizontal gap between HH and mm columns
-
-        // First Column: Tens digit of Hour over Tens digit of Minute
         Column {
-            spacing: -45 // Overlap to match Pixel look
+            spacing: -130
             Text {
                 text: clock.timeStr.charAt(0)
                 color: clock.smartHoursColor
                 font.pixelSize: 200
                 font.family: clock.fontFamily
                 font.weight: Font.Medium
-                width: 130 // Ensures digit 1 and digit 3 are centered in same space
+                width: 130
                 horizontalAlignment: Text.AlignHCenter
                 antialiasing: true
             }
@@ -161,9 +88,8 @@ Item {
             }
         }
 
-        // Second Column: Ones digit of Hour over Ones digit of Minute
         Column {
-            spacing: -45
+            spacing: -130
             Text {
                 text: clock.timeStr.charAt(1)
                 color: clock.smartHoursColor
@@ -191,8 +117,6 @@ Item {
         interval: 1000
         running: true
         repeat: true
-        onTriggered: {
-            clock.timeStr = Qt.formatTime(new Date(), "HHmm")
-        }
+        onTriggered: updateTime()
     }
 }
