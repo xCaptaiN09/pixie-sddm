@@ -257,7 +257,7 @@ Rectangle {
     Rectangle {
         anchors.fill: parent
         color: "black"
-        opacity: loginState.visible ? 0.6 : 0.4
+        opacity: loginState.visible ? 0.45 : 0.3
         Behavior on opacity { NumberAnimation { duration: 400 } }
     }
 
@@ -367,18 +367,14 @@ Rectangle {
             onStopped: isError = false
         }
 
-        Rectangle {
+        Item {
             id: loginCard
-            width: 380
+            width: 500
             // Dynamic height: Expands smoothly when NumLock text appears
             height: 480 + (numLockIndicator.visible ? 40 : 0)
             x: (parent.width - width) / 2
             y: (parent.height - 480) / 2
-            color: loginState.isError ? "#442222" : baseColor
-            opacity: 0.7
-            radius: 32
 
-            Behavior on color { ColorAnimation { duration: 200 } }
             // Beautiful MD3 bounce/jiggle animation when card resizes
             Behavior on height { NumberAnimation { duration: 300; easing.type: Easing.InOutQuad } }
             // Also animate Y position so it stays perfectly centered when height changes
@@ -521,12 +517,12 @@ Rectangle {
                 Rectangle {
                     id: sessionPill
                     Layout.alignment: Qt.AlignHCenter
-                    Layout.preferredWidth: 180
+                    Layout.preferredWidth: 220
                     Layout.preferredHeight: 36
-                    color: (sessionClickArea.pressed || sessionPopup.opened) ? surfaceVariantColor : surfaceColor
+                    color: (sessionClickArea.pressed || sessionPopup.opened) ? Qt.rgba(container.extractedAccent.r, container.extractedAccent.g, container.extractedAccent.b, 0.2) : Qt.rgba(1, 1, 1, 0.08)
                     radius: 18
                     border.width: 1
-                    border.color: (sessionClickArea.pressed || sessionPopup.opened) ? container.extractedAccent : surfaceVariantColor
+                    border.color: (sessionClickArea.pressed || sessionPopup.opened) ? container.extractedAccent : Qt.rgba(1, 1, 1, 0.25)
 
                     scale: sessionClickArea.pressed ? 0.95 : 1.0
                     Behavior on scale { NumberAnimation { duration: 100 } }
@@ -537,6 +533,7 @@ Rectangle {
                         Text {
                             text: "󰟀"
                             color: container.extractedAccent
+                            opacity: 0.85
                             font.pixelSize: 16
                         }
                         Text {
@@ -552,7 +549,7 @@ Rectangle {
                                 }
                                 return "Hyprland";
                             }
-                            color: "white"
+                            color: Qt.rgba(1, 1, 1, 0.85)
                             font.pixelSize: 13
                             font.weight: Font.Medium
                         }
@@ -565,35 +562,75 @@ Rectangle {
                     }
                 }
 
-                TextField {
-                    id: passwordField
+                Rectangle {
+                    id: passwordPill
                     Layout.topMargin: 30 // Keeps space above it static
-                    echoMode: TextInput.Password
-                    Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignHCenter
-                    font.pixelSize: 18
-                    color: "white"
-                    focus: loginState.visible
+                    Layout.preferredWidth: 420
+                    Layout.preferredHeight: 52
+                    Layout.alignment: Qt.AlignHCenter
+                    color: loginState.isError ? Qt.rgba(0.27, 0.13, 0.13, 0.45) : Qt.rgba(1, 1, 1, 0.08)
+                    radius: 26
+                    border.width: passwordField.activeFocus || loginState.isError ? 2 : 1
+                    border.color: loginState.isError ? "#ffb4ab" : (passwordField.activeFocus ? container.extractedAccent : Qt.rgba(1, 1, 1, 0.25))
+                    opacity: container.isLoggingIn ? 0.5 : 1.0
                     enabled: !container.isLoggingIn
 
-                    background: Rectangle {
-                        color: surfaceColor
-                        radius: 16
-                        border.width: parent.activeFocus ? 2 : 0
-                        border.color: container.extractedAccent
-                        opacity: parent.enabled ? 1.0 : 0.5
-                    }
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 22
+                        anchors.rightMargin: 4
+                        spacing: 8
 
-                    Text {
-                        text: "Enter Password"
-                        color: "gray"
-                        font.pixelSize: 16
-                        visible: !parent.text
-                        anchors.centerIn: parent
-                        opacity: 0.5
-                    }
+                        TextField {
+                            id: passwordField
+                            echoMode: TextInput.Password
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            horizontalAlignment: Text.AlignLeft
+                            verticalAlignment: Text.AlignVCenter
+                            font.pixelSize: 20
+                            color: "white"
+                            focus: loginState.visible
+                            enabled: !container.isLoggingIn
+                            background: Item {}
 
-                    onAccepted: container.doLogin()
+                            Text {
+                                text: "Enter Password"
+                                color: "gray"
+                                font.pixelSize: 16
+                                visible: !parent.text
+                                anchors.verticalCenter: parent.verticalCenter
+                                opacity: 0.65
+                            }
+
+                            onAccepted: container.doLogin()
+                        }
+
+                        RoundButton {
+                            id: loginButton
+                            Layout.preferredWidth: 44
+                            Layout.preferredHeight: 44
+                            focusPolicy: Qt.NoFocus
+                            enabled: !container.isLoggingIn
+
+                            contentItem: Text {
+                                text: container.isLoggingIn ? "⋯" : "→"
+                                color: container.extractedAccent
+                                font.pixelSize: 26
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            background: Rectangle {
+                                color: loginButton.pressed ? Qt.rgba(container.extractedAccent.r, container.extractedAccent.g, container.extractedAccent.b, 0.2) : "transparent"
+                                radius: 22
+                            }
+
+                            onClicked: {
+                                container.doLogin();
+                            }
+                        }
+                    }
                 }
 
                 Text {
@@ -610,33 +647,6 @@ Rectangle {
                     }
                     opacity: visible ? 1 : 0
                     Behavior on opacity { NumberAnimation { duration: 200 } }
-                }
-
-                RoundButton {
-                    id: loginButton
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.preferredWidth: 64
-                    Layout.preferredHeight: 64
-                    focusPolicy: Qt.NoFocus
-                    enabled: !container.isLoggingIn
-
-                    contentItem: Text {
-                        text: container.isLoggingIn ? "⋯" : "→"
-                        color: "white"
-                        font.pixelSize: 32
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    background: Rectangle {
-                        color: container.isLoggingIn ? surfaceVariantColor : (loginButton.pressed ? Qt.darker(container.extractedAccent, 1.1) : container.extractedAccent)
-                        radius: 32
-                        opacity: container.isLoggingIn ? 0.5 : 1.0
-                    }
-
-                    onClicked: {
-                        container.doLogin();
-                    }
                 }
 
                 Item { Layout.fillHeight: true } // ADD THIS LINE HERE AT THE BOTTOM
