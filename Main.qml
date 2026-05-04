@@ -106,6 +106,8 @@ Rectangle {
     property color surfaceVariantColor: Qt.lighter(baseColor, 1.6)
     property color ghostSurface: Qt.rgba(1, 1, 1, 0.08)
     property color ghostBorder: Qt.rgba(1, 1, 1, 0.25)
+    property color errorSurface: Qt.rgba(1, 0.4, 0.42, 0.18)
+    property color errorBorder: Qt.rgba(1, 0.4, 0.42, 1.0)
     property bool uiReady: config.autoColor !== "true" || colorExtractor.processed
 
     Timer {
@@ -570,10 +572,10 @@ Rectangle {
                     Layout.preferredWidth: 420
                     Layout.preferredHeight: 52
                     Layout.alignment: Qt.AlignHCenter
-                    color: loginState.isError ? Qt.rgba(0.27, 0.13, 0.13, 0.45) : container.ghostSurface
+                    color: loginState.isError ? container.errorSurface : container.ghostSurface
                     radius: 26
                     border.width: passwordField.activeFocus || loginState.isError ? 2 : 1
-                    border.color: loginState.isError ? "#ffb4ab" : (passwordField.activeFocus ? container.extractedAccent : container.ghostBorder)
+                    border.color: loginState.isError ? container.errorBorder : (passwordField.activeFocus ? container.extractedAccent : container.ghostBorder)
                     opacity: container.isLoggingIn ? 0.5 : 1.0
                     enabled: !container.isLoggingIn
 
