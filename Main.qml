@@ -373,7 +373,7 @@ Rectangle {
             // Dynamic height: Expands smoothly when NumLock text appears
             height: 480 + (numLockIndicator.visible ? 40 : 0)
             x: (parent.width - width) / 2
-            y: (parent.height - 480) / 2
+            y: (parent.height - height) / 2
 
             // Beautiful MD3 bounce/jiggle animation when card resizes
             Behavior on height { NumberAnimation { duration: 300; easing.type: Easing.InOutQuad } }
