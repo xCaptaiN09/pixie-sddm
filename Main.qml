@@ -104,6 +104,8 @@ Rectangle {
     property color baseColor: config.backgroundColor
     property color surfaceColor: Qt.lighter(baseColor, 1.3)
     property color surfaceVariantColor: Qt.lighter(baseColor, 1.6)
+    property color ghostSurface: Qt.rgba(1, 1, 1, 0.08)
+    property color ghostBorder: Qt.rgba(1, 1, 1, 0.25)
     property bool uiReady: config.autoColor !== "true" || colorExtractor.processed
 
     Timer {
@@ -519,10 +521,10 @@ Rectangle {
                     Layout.alignment: Qt.AlignHCenter
                     Layout.preferredWidth: 220
                     Layout.preferredHeight: 36
-                    color: (sessionClickArea.pressed || sessionPopup.opened) ? Qt.rgba(container.extractedAccent.r, container.extractedAccent.g, container.extractedAccent.b, 0.2) : Qt.rgba(1, 1, 1, 0.08)
+                    color: (sessionClickArea.pressed || sessionPopup.opened) ? Qt.rgba(container.extractedAccent.r, container.extractedAccent.g, container.extractedAccent.b, 0.2) : container.ghostSurface
                     radius: 18
                     border.width: 1
-                    border.color: (sessionClickArea.pressed || sessionPopup.opened) ? container.extractedAccent : Qt.rgba(1, 1, 1, 0.25)
+                    border.color: (sessionClickArea.pressed || sessionPopup.opened) ? container.extractedAccent : container.ghostBorder
 
                     scale: sessionClickArea.pressed ? 0.95 : 1.0
                     Behavior on scale { NumberAnimation { duration: 100 } }
@@ -568,10 +570,10 @@ Rectangle {
                     Layout.preferredWidth: 420
                     Layout.preferredHeight: 52
                     Layout.alignment: Qt.AlignHCenter
-                    color: loginState.isError ? Qt.rgba(0.27, 0.13, 0.13, 0.45) : Qt.rgba(1, 1, 1, 0.08)
+                    color: loginState.isError ? Qt.rgba(0.27, 0.13, 0.13, 0.45) : container.ghostSurface
                     radius: 26
                     border.width: passwordField.activeFocus || loginState.isError ? 2 : 1
-                    border.color: loginState.isError ? "#ffb4ab" : (passwordField.activeFocus ? container.extractedAccent : Qt.rgba(1, 1, 1, 0.25))
+                    border.color: loginState.isError ? "#ffb4ab" : (passwordField.activeFocus ? container.extractedAccent : container.ghostBorder)
                     opacity: container.isLoggingIn ? 0.5 : 1.0
                     enabled: !container.isLoggingIn
 
