@@ -233,6 +233,9 @@ Rectangle {
     FontLoader { id: fontMedium; source: "assets/fonts/FlexRounded-M.ttf" }
     FontLoader { id: fontBold; source: "assets/fonts/FlexRounded-B.ttf" }
 
+    property string activeFontRegular: (config.fontFamily && config.fontFamily.length > 0) ? config.fontFamily : fontRegular.name
+    property string activeFontBold:    (config.fontFamily && config.fontFamily.length > 0) ? config.fontFamily : fontBold.name
+
     Image {
         id: backgroundImage
         source: config.background
@@ -296,7 +299,7 @@ Rectangle {
         text: Qt.formatDateTime(new Date(), "dddd, MMMM d")
         color: container.extractedAccent
         font.pixelSize: 22
-        font.family: fontRegular.name
+        font.family: activeFontRegular
         anchors {
             top: parent.top
             left: parent.left
@@ -319,7 +322,7 @@ Rectangle {
             anchors.centerIn: parent
             backgroundSource: config.background
             baseAccent: container.extractedAccent
-            fontFamily: fontRegular.name
+            fontFamily: container.activeFontRegular
             opacity: container.uiReady ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: 300 } }
         }
@@ -416,7 +419,7 @@ Rectangle {
                             }
                             color: container.extractedAccent
                             font.pixelSize: 48
-                            font.family: fontBold.name
+                            font.family: activeFontBold
                             font.weight: Font.Bold
                         }
                     }
@@ -505,7 +508,7 @@ Rectangle {
                         color: "white"
                         font.pixelSize: 24
                         font.weight: Font.Bold
-                        font.family: fontRegular.name
+                        font.family: activeFontRegular
                     }
 
                     MouseArea {
@@ -601,7 +604,7 @@ Rectangle {
                     text: "Num Lock is on"
                     color: container.extractedAccent
                     font.pixelSize: 14
-                    font.family: fontRegular.name
+                    font.family: activeFontRegular
                     font.weight: Font.Medium
                     Layout.alignment: Qt.AlignHCenter
                     visible: {
@@ -720,7 +723,7 @@ Rectangle {
                             }
                             color: isCurrent ? baseColor : "white"
                             font.pixelSize: 12
-                            font.family: fontBold.name
+                            font.family: activeFontBold
                             font.weight: Font.Bold
                         }
                     }
@@ -737,7 +740,7 @@ Rectangle {
                         }
                         color: isCurrent ? "white" : (hovered ? "#DDDDDD" : "#AAAAAA")
                         font.pixelSize: 15
-                        font.family: fontRegular.name
+                        font.family: activeFontRegular
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                         rightPadding: 60
@@ -824,7 +827,7 @@ Rectangle {
                         }
                         color: isCurrent ? "white" : "#AAAAAA"
                         font.pixelSize: 14
-                        font.family: fontRegular.name
+                        font.family: activeFontRegular
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                         rightPadding: 60
