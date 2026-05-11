@@ -520,6 +520,7 @@ Rectangle {
 
                 Rectangle {
                     id: sessionPill
+                    visible: typeof sessionModel !== "undefined" && sessionModel.count > 1
                     Layout.alignment: Qt.AlignHCenter
                     Layout.preferredWidth: 180
                     Layout.preferredHeight: 36
