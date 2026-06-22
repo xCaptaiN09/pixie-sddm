@@ -92,7 +92,17 @@ rm -rf "${BACKUP_DIR}"
 
 echo -e "${GREEN}Done!${NC} Pixie SDDM is now installed."
 
-# 6. CONFIGURATION
+# 6. GREETER ENVIRONMENT (Required for Noctalia avatar integration)
+echo -e "${BLUE}==> ${NC}Configuring greeter environment..."
+mkdir -p /etc/sddm.conf.d
+if [ ! -f /etc/sddm.conf.d/pixie-env.conf ] || ! grep -q "QML_XHR_ALLOW_FILE_READ" /etc/sddm.conf.d/pixie-env.conf 2>/dev/null; then
+    echo -e "[General]\nGreeterEnvironment=QML_XHR_ALLOW_FILE_READ=1" > /etc/sddm.conf.d/pixie-env.conf
+    echo -e "${GREEN}Greeter environment configured.${NC}"
+else
+    echo -e "${BLUE}==> ${NC}Greeter environment already configured."
+fi
+
+# 7. CONFIGURATION
 echo -e ""
 read -p "Apply Pixie as your active theme now? (y/N) " -n 1 -r
 echo

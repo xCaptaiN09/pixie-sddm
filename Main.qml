@@ -37,6 +37,75 @@ Rectangle {
         return s.charAt(0).toUpperCase() + s.slice(1);
     }
 
+    // Get the login username for a given userIndex
+    function getUserName(idx) {
+        if (typeof userModel === "undefined" || userModel.count === 0) return "";
+        if (idx < 0 || idx >= userModel.count) idx = 0;
+        var edit = userModel.data(userModel.index(idx, 0), Qt.EditRole);
+        var nameRole = userModel.data(userModel.index(idx, 0), Qt.UserRole + 1);
+        var display = userModel.data(userModel.index(idx, 0), Qt.DisplayRole);
+        var user = edit ? edit.toString() : (nameRole ? nameRole.toString() : (display ? display.toString() : ""));
+        return user;
+    }
+
+    // Load avatar from Noctalia settings.json for the given username
+    function loadNoctaliaAvatar(username) {
+        if (!username) { loadFallbackAvatar(); return; }
+        var path = "/home/" + username + "/.config/noctalia/settings.json";
+        var xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                // Prevent race condition if user changed selection during XHR
+                if (username !== getUserName(container.userIndex)) {
+                    console.log("Pixie SDDM: Discarding obsolete avatar load for '" + username + "'");
+                    return;
+                }
+                if ((xhr.status === 0 || xhr.status === 200) && xhr.responseText) {
+                    try {
+                        var json = JSON.parse(xhr.responseText);
+                        if (json && json.general && json.general.avatarImage && json.general.avatarImage !== "") {
+                            var imgPath = json.general.avatarImage;
+                            // Ensure file:// prefix for absolute paths
+                            if (imgPath.charAt(0) === '/') imgPath = "file://" + imgPath;
+                            avatar.source = imgPath;
+                            console.log("Pixie SDDM: Noctalia avatar loaded: " + imgPath);
+                            return;
+                        }
+                    } catch (e) {
+                        console.log("Pixie SDDM: Failed to parse Noctalia settings for '" + username + "': " + e);
+                    }
+                }
+                // Noctalia settings not found or no avatarImage — use fallback
+                console.log("Pixie SDDM: No Noctalia avatar for '" + username + "', using fallback.");
+                loadFallbackAvatar();
+            }
+        };
+        xhr.open("GET", "file://" + path);
+        xhr.send();
+    }
+
+    // Fallback: SDDM userModel icon role → static assets/avatar.jpg
+    function loadFallbackAvatar() {
+        var s = Qt.resolvedUrl("assets/avatar.jpg");
+        if (typeof userModel !== "undefined" && userModel.count > 0) {
+            var idx = container.userIndex;
+            if (idx < 0 || idx >= userModel.count) idx = 0;
+            var icon = userModel.data(userModel.index(idx, 0), Qt.UserRole + 3);
+            if (icon && icon.toString().match(/\.(jpg|jpeg|png|bmp|webp|svg)$/i)) {
+                s = icon.toString();
+            }
+        }
+        avatar.source = s;
+        console.log("Pixie SDDM: Fallback avatar: " + s);
+    }
+
+    // Reload avatar whenever the selected user changes
+    onUserIndexChanged: {
+        avatar.source = ""; // Clear current avatar so fallback letter appears while loading
+        var username = getUserName(userIndex);
+        loadNoctaliaAvatar(username);
+    }
+
     function doLogin() {
         if (!loginState.visible || isLoggingIn) return;
 
@@ -421,54 +490,48 @@ Rectangle {
                         }
                     }
 
-                    // Bulletproof Circular Avatar (Canvas method)
-                    Canvas {
-                        id: avatarCanvas
+                    // Bulletproof Circular Avatar (MultiEffect method)
+                    Image {
+                        id: avatar
                         anchors.fill: parent
+                        fillMode: Image.PreserveAspectCrop
+                        smooth: true
+                        visible: false
+                        cache: false // Ensure fresh loads when switching users
+
+                        Component.onCompleted: {
+                            // Initial load: try Noctalia settings for the current user
+                            var username = container.getUserName(container.userIndex);
+                            container.loadNoctaliaAvatar(username);
+                        }
+
+                        onStatusChanged: {
+                            if (status === Image.Error) {
+                                console.log("Pixie SDDM: Image failed to load, falling back.");
+                                // If the Noctalia avatar path was invalid, fall back
+                                var fallback = Qt.resolvedUrl("assets/avatar.jpg");
+                                if (source.toString() !== fallback.toString()) {
+                                    source = fallback;
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        id: avatarMask
+                        anchors.fill: parent
+                        radius: width / 2
+                        color: "white"
+                        visible: false
+                        layer.enabled: true
+                    }
+
+                    MultiEffect {
+                        anchors.fill: parent
+                        source: avatar
                         visible: avatar.status === Image.Ready
-
-                        onPaint: {
-                            var ctx = getContext("2d");
-                            ctx.reset();
-                            ctx.beginPath();
-                            ctx.arc(width/2, height/2, width/2, 0, 2 * Math.PI);
-                            ctx.closePath();
-                            ctx.clip();
-                            ctx.drawImage(avatar, 0, 0, width, height);
-                            console.log("Pixie SDDM: Canvas draw complete.");
-                        }
-
-                        Timer {
-                            id: repaintTimer
-                            interval: 500
-                            onTriggered: avatarCanvas.requestPaint()
-                        }
-
-                        Image {
-                            id: avatar
-                            anchors.fill: parent
-                            fillMode: Image.PreserveAspectCrop
-                            smooth: true
-                            visible: false
-
-                            Component.onCompleted: {
-                                var s = Qt.resolvedUrl("assets/avatar.jpg");
-                                if (typeof userModel !== "undefined" && userModel.count > 0) {
-                                    var icon = userModel.data(userModel.index(container.userIndex, 0), Qt.UserRole + 3);
-                                    if (icon && icon.toString().match(/\.(jpg|jpeg|png|bmp|webp|svg)$/i)) {
-                                        s = icon.toString();
-                                    }
-                                }
-                                source = s;
-                            }
-
-                            onStatusChanged: {
-                                if (status === Image.Ready) {
-                                    console.log("Pixie SDDM: Image ready, repainting Canvas.");
-                                    repaintTimer.start();
-                                }
-                            }
-                        }
+                        maskEnabled: true
+                        maskSource: avatarMask
                     }
                 }
 
