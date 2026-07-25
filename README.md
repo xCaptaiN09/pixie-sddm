@@ -75,6 +75,11 @@ Pixie SDDM automatically detects your system and installs the correct version.
 
 ### Method A: Automatic Script (Recommended)
 This script intelligently detects your Qt version and handles everything:
+
+<div align="center">
+  <img src="screenshots/install.gif" width="70%" alt="Automatic installation demo" />
+</div>
+
 ```bash
 git clone https://github.com/xCaptaiN09/pixie-sddm.git
 cd pixie-sddm
