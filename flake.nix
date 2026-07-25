@@ -22,13 +22,11 @@
           {
             background ? null,
             avatar ? null,
-            primaryColor ? null,
             accentColor ? null,
             autoColor ? null,
             backgroundColor ? null,
             textColor ? null,
             fontFamily ? null,
-            fontSize ? null,
             ...
           }@args:
           let
@@ -39,13 +37,11 @@
             knownArgs = {
               inherit
                 background
-                primaryColor
                 accentColor
                 autoColor
                 backgroundColor
                 textColor
                 fontFamily
-                fontSize
                 ;
             };
 

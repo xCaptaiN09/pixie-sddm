@@ -130,13 +130,11 @@ The most modern and flexible way to install.
     (inputs.pixie-sddm.packages.${pkgs.stdenv.hostPlatform.system}.pixie-sddm.override {
       background = ./my-background.jpg; # Nix path or absolute path
       avatar = ./my-avatar.jpg;         # Nix path or absolute path
-      primaryColor = "#B3C8FF";         # Hex color code
       accentColor = "#3F5F91";          # Hex color code
       autoColor = true;                 # true/false
       backgroundColor = "#1A1C1E";      # Hex color code
       textColor = "#E2E2E6";            # Hex color code
-      fontFamily = "JetBrains Mono";    # Font family name
-      fontSize = 13;                    # Font size in px
+      fontFamily = "JetBrains Mono";    # Font family name (must be installed system-wide)
     })
   ];
 }
