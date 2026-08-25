@@ -11,6 +11,20 @@ import QtQuick.Effects
 import "components"
 
 Rectangle {
+    component HintBadge : Rectangle {
+        property string letter: ""
+        property bool shown: false
+        width: 16; height: 16; radius: 8
+        color: "black"; opacity: 0.78
+        visible: shown
+        Text {
+            text: parent.letter
+            color: "white"
+            font.pixelSize: 11
+            font.weight: Font.Bold
+            anchors.centerIn: parent
+        }
+    }
     id: container
     width: 1920
     height: 1080
@@ -21,6 +35,7 @@ Rectangle {
     property int userIndex: 0
     property int sessionIndex: 0
     property bool isLoggingIn: false
+    property bool hintMode: false
 
     Component.onCompleted: {
         if (typeof userModel !== "undefined" && userModel.lastIndex >= 0) userIndex = userModel.lastIndex;
@@ -266,6 +281,7 @@ Rectangle {
     }
 
     PowerBar {
+        id: powerBar
         anchors {
             top: parent.top
             right: parent.right
@@ -273,6 +289,7 @@ Rectangle {
             rightMargin: 40
         }
         textColor: container.extractedAccent
+        hintMode: container.hintMode
         z: 100
         opacity: container.uiReady ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: 300 } }
@@ -477,6 +494,7 @@ Rectangle {
                 }
 
                 Item {
+                    id: userPill
                     Layout.alignment: Qt.AlignHCenter
                     Layout.preferredWidth: userNameLabel.width + 40
                     Layout.preferredHeight: userNameLabel.height + 20
@@ -520,6 +538,15 @@ Rectangle {
 
                     scale: userClickArea.pressed ? 0.95 : 1.0
                     Behavior on scale { NumberAnimation { duration: 100 } }
+
+                    // Keyboard hint badge for the user selector (shown when the menu is closed)
+                    HintBadge {
+                        letter: "u"
+                        shown: container.hintMode && !userPopup.opened
+                        anchors.right: parent.left
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
                 }
 
                 Rectangle {
@@ -567,6 +594,15 @@ Rectangle {
                         id: sessionClickArea
                         anchors.fill: parent
                         onClicked: sessionPopup.open()
+                    }
+
+                    // Keyboard hint badge for the session / DE-WM menu (shown when the menu is closed)
+                    HintBadge {
+                        letter: "e"
+                        shown: container.hintMode && !sessionPopup.opened
+                        anchors.right: parent.left
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
                     }
                 }
 
@@ -650,9 +686,47 @@ Rectangle {
     }
 
     Keys.onPressed: function(event) {
+        // Hold Alt to reveal the power-button hints
+        if (event.key === Qt.Key_Alt) {
+            if (!container.hintMode) {
+                container.hintMode = true;
+                loginState.visible = true;
+                container.forceActiveFocus();
+            }
+            event.accepted = true;
+            return;
+        }
+        if (container.hintMode) {
+            var t = (event.text !== undefined) ? event.text.toLowerCase() : "";
+            if (t === "") {
+                if (event.key === Qt.Key_S) t = "s";
+                else if (event.key === Qt.Key_R) t = "r";
+                else if (event.key === Qt.Key_P) t = "p";
+                else if (event.key === Qt.Key_E) t = "e";
+                else if (event.key === Qt.Key_U) t = "u";
+            }
+            if (t === "s") { powerBar.doSuspend(); event.accepted = true; return; }
+            if (t === "r") { powerBar.doReboot(); event.accepted = true; return; }
+            if (t === "p") { powerBar.doPowerOff(); event.accepted = true; return; }
+            if (t === "e") { sessionPopup.open(); event.accepted = true; return; }
+            if (t === "u") { userPopup.open(); event.accepted = true; return; }
+            // While hints are shown, swallow every other key (no typing)
+            event.accepted = true;
+            return;
+        }
+        // Default: any other key opens the login prompt (original behavior)
         if (!loginState.visible) {
             loginState.visible = true;
             passwordField.forceActiveFocus();
+            event.accepted = true;
+        }
+    }
+
+    Keys.onReleased: function(event) {
+        // Releasing Alt hides the hints and returns focus to the password field
+        if (event.key === Qt.Key_Alt) {
+            container.hintMode = false;
+            if (loginState.visible) passwordField.forceActiveFocus();
             event.accepted = true;
         }
     }
@@ -667,6 +741,7 @@ Rectangle {
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         onOpened: userList.forceActiveFocus()
+        onClosed: if (loginState.visible) passwordField.forceActiveFocus()
         background: Rectangle {
             color: baseColor
             radius: 24
@@ -758,6 +833,21 @@ Rectangle {
             Keys.onUpPressed: decrementCurrentIndex()
             Keys.onReturnPressed: { container.userIndex = currentIndex; userPopup.close(); }
             Keys.onEnterPressed: { container.userIndex = currentIndex; userPopup.close(); }
+            Keys.onReleased: function(event) {
+                if (event.key === Qt.Key_Alt) {
+                    container.hintMode = false;
+                    event.accepted = true;
+                }
+            }
+        }
+
+        // Hint badge shown next to the user menu while hints are active
+        HintBadge {
+            letter: "u"
+            shown: container.hintMode && userPopup.opened
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.top
+            anchors.bottomMargin: 4
         }
     }
 
@@ -771,6 +861,7 @@ Rectangle {
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         onOpened: sessionList.forceActiveFocus()
+        onClosed: if (loginState.visible) passwordField.forceActiveFocus()
         background: Rectangle {
             color: baseColor
             radius: 24
@@ -845,6 +936,12 @@ Rectangle {
             Keys.onUpPressed: decrementCurrentIndex()
             Keys.onReturnPressed: { container.sessionIndex = currentIndex; sessionPopup.close(); }
             Keys.onEnterPressed: { container.sessionIndex = currentIndex; sessionPopup.close(); }
+            Keys.onReleased: function(event) {
+                if (event.key === Qt.Key_Alt) {
+                    container.hintMode = false;
+                    event.accepted = true;
+                }
+            }
         }
     }
 }
