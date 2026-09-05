@@ -13,6 +13,31 @@ Row {
 
     FontLoader { id: iconFont; source: "../assets/fonts/MaterialDesignIcons.ttf" }
 
+    property bool hintMode: false
+
+    function cycleLayout() {
+        if (typeof keyboard !== "undefined" && keyboard.layouts.length > 1)
+            keyboard.currentLayout = (keyboard.currentLayout + 1) % keyboard.layouts.length
+    }
+    function doSuspend() { sddm.suspend() }
+    function doReboot() { sddm.reboot() }
+    function doPowerOff() { sddm.powerOff() }
+
+    component HintBadge : Rectangle {
+        property string letter: ""
+        property bool shown: false
+        width: 16; height: 16; radius: 8
+        color: "black"; opacity: 0.78
+        visible: shown
+        Text {
+            text: parent.letter
+            color: "white"
+            font.pixelSize: 11
+            font.weight: Font.Bold
+            anchors.centerIn: parent
+        }
+    }
+
     // Battery (With forced live updates)
     Row {
         id: batteryRow
@@ -61,9 +86,7 @@ Row {
 
         MouseArea {
             anchors.fill: parent
-            onClicked: {
-                keyboard.currentLayout = (keyboard.currentLayout + 1) % keyboard.layouts.length
-            }
+            onClicked: powerBarRoot.cycleLayout()
         }
     }
 
@@ -74,11 +97,18 @@ Row {
         font.pixelSize: 20
         font.family: iconFont.name
         anchors.verticalCenter: parent.verticalCenter
-        MouseArea {
-            anchors.fill: parent
-            onClicked: sddm.suspend()
+            MouseArea {
+                anchors.fill: parent
+                onClicked: powerBarRoot.doSuspend()
+            }
+            HintBadge {
+                letter: "s"
+                shown: powerBarRoot.hintMode
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.bottom
+                anchors.topMargin: 4
+            }
         }
-    }
 
     // Restart
     Text {
@@ -87,11 +117,18 @@ Row {
         font.pixelSize: 20
         font.family: iconFont.name
         anchors.verticalCenter: parent.verticalCenter
-        MouseArea {
-            anchors.fill: parent
-            onClicked: sddm.reboot()
+            MouseArea {
+                anchors.fill: parent
+                onClicked: powerBarRoot.doReboot()
+            }
+            HintBadge {
+                letter: "r"
+                shown: powerBarRoot.hintMode
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.bottom
+                anchors.topMargin: 4
+            }
         }
-    }
 
     // Shutdown
     Text {
@@ -100,9 +137,16 @@ Row {
         font.pixelSize: 20
         font.family: iconFont.name
         anchors.verticalCenter: parent.verticalCenter
-        MouseArea {
-            anchors.fill: parent
-            onClicked: sddm.powerOff()
+            MouseArea {
+                anchors.fill: parent
+                onClicked: powerBarRoot.doPowerOff()
+            }
+            HintBadge {
+                letter: "p"
+                shown: powerBarRoot.hintMode
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.bottom
+                anchors.topMargin: 4
+            }
         }
-    }
 }
