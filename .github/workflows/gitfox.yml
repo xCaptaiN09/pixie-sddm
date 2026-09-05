@@ -1,1 +1,33 @@
+name: gitfox
 
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      scan_all:
+        description: "Scan all open PRs and issues"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  gitfox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    concurrency:
+      group: gitfox-${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: xCaptaiN09/gitfox@v1
+        with:
+          scan-all: ${{ github.event.inputs.scan_all == 'true' }}
