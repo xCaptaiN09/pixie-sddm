@@ -457,9 +457,14 @@ Rectangle {
 
                             Component.onCompleted: {
                                 var s = Qt.resolvedUrl("assets/avatar.jpg");
+                            
                                 if (typeof userModel !== "undefined" && userModel.count > 0) {
-                                    var icon = userModel.data(userModel.index(container.userIndex, 0), Qt.UserRole + 3);
-                                    if (icon && icon.toString().match(/\.(jpg|jpeg|png|bmp|webp|svg)$/i)) {
+                                    var icon = userModel.data(
+                                        userModel.index(container.userIndex, 0),
+                                        Qt.UserRole + 4
+                                    );
+                            
+                                    if (icon && icon.toString() !== "") {
                                         s = icon.toString();
                                     }
                                 }
