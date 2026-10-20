@@ -653,6 +653,13 @@ Rectangle {
         if (!loginState.visible) {
             loginState.visible = true;
             passwordField.forceActiveFocus();
+            // Pass the waking key through so the first character isn't lost
+            var ch = event.text;
+            if (ch.length > 0 && ch.charCodeAt(0) >= 32 && ch.charCodeAt(0) !== 127
+                    && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
+                passwordField.insert(passwordField.length, ch);
+                passwordField.cursorPosition = passwordField.length;
+            }
             event.accepted = true;
         }
     }
